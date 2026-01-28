@@ -3,7 +3,7 @@ const musicImage = document.querySelector('.img-area img');
 const musicName = document.querySelector('.song-name');
 const musicArtist = document.querySelector('.song-artist');
 const musicAudio = document.getElementById('main-audio');
-const palyPause = document.querySelector('.play-pause');
+const palyPause = document.querySelector('.paly-pause'); // note spelling
 const nextBtn = document.getElementById('next');
 const prevBtn = document.getElementById('prev');
 const progressArea = document.querySelector('.progress-area');
@@ -26,17 +26,32 @@ window.addEventListener('load', () => {
   loadMusicList();
 });
 
+// ==========================
 // Load Music Function
+// ==========================
 function loadMusic(indexNum) {
   const song = allMusic[indexNum];
   musicName.textContent = song.name;
   musicArtist.textContent = song.artist;
-  musicImage.src = `img/${song.img}.jpg`;
+
+  // Image fallback
+  const imgPath = `img/${song.img}.jpg`;
+  fetch(imgPath)
+    .then(res => {
+      if(res.ok) musicImage.src = imgPath;
+      else musicImage.src = "img/default.jpg";
+    })
+    .catch(() => musicImage.src = "img/default.jpg");
+
+  // Audio
   musicAudio.src = `song/${song.src}.mp3`;
+
   highlightPlaySong();
 }
 
+// ==========================
 // Play / Pause Functions
+// ==========================
 function playMusic() {
   musicAudio.play();
   isMusicPaused = false;
@@ -55,7 +70,9 @@ function pauseMusic() {
 
 palyPause.addEventListener('click', () => isMusicPaused ? playMusic() : pauseMusic());
 
+// ==========================
 // Next / Previous
+// ==========================
 function nextMusic() {
   musicIndex = (musicIndex + 1) % allMusic.length;
   loadMusic(musicIndex);
@@ -70,7 +87,9 @@ function prevMusic() {
 nextBtn.addEventListener('click', nextMusic);
 prevBtn.addEventListener('click', prevMusic);
 
-// Progress Update
+// ==========================
+// Progress Bar Update
+// ==========================
 musicAudio.addEventListener('timeupdate', e => {
   const currentTime = e.target.currentTime;
   const duration = e.target.duration;
@@ -103,7 +122,9 @@ progressArea.addEventListener('click', e => {
   playMusic();
 });
 
+// ==========================
 // Repeat / Shuffle
+// ==========================
 repeatPlis.addEventListener('click', () => {
   const txt = repeatPlis.innerText;
   if(txt === "repeat"){
@@ -139,7 +160,9 @@ function shuffleMusic(){
   playMusic();
 }
 
+// ==========================
 // Music List
+// ==========================
 moreMusic.addEventListener('click', () => musicList.classList.toggle('active'));
 closeBtn.addEventListener('click', () => musicList.classList.remove('active'));
 
@@ -179,19 +202,43 @@ function loadMusicList(){
   highlightPlaySong();
 }
 
+// ==========================
 // Highlight Playing Song
+// ==========================
 function highlightPlaySong(){
   const allLi = ulTag.querySelectorAll('li');
   allLi.forEach(li => li.classList.remove('playing'));
   if(allLi[musicIndex]) allLi[musicIndex].classList.add('playing');
 }
 
-// Search Feature
+// ==========================
+// Search Feature (working + top match first)
+// ==========================
 searchInput.addEventListener('input', () => {
   const query = searchInput.value.toLowerCase();
-  ulTag.querySelectorAll('li').forEach(li => {
+  const allLi = Array.from(ulTag.querySelectorAll('li'));
+
+  const matched = [];
+  const unmatched = [];
+
+  allLi.forEach(li => {
     const name = li.querySelector('.row span').innerText.toLowerCase();
     const artist = li.querySelector('.row span:nth-child(2)')?.innerText.toLowerCase() || '';
-    li.style.display = name.includes(query) || artist.includes(query) ? 'flex' : 'none';
+    
+    if(name.includes(query) || artist.includes(query)) {
+      matched.push(li);
+    } else {
+      unmatched.push(li);
+    }
+  });
+
+  ulTag.innerHTML = "";
+  matched.forEach(li => {
+    li.style.display = 'flex';
+    ulTag.appendChild(li);
+  });
+  unmatched.forEach(li => {
+    li.style.display = 'none';
+    ulTag.appendChild(li);
   });
 });
