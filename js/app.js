@@ -3,203 +3,242 @@ const musicImage = document.querySelector('.img-area img');
 const musicName = document.querySelector('.song-name');
 const musicArtist = document.querySelector('.song-artist');
 const musicAudio = document.getElementById('main-audio');
-const palyPause = document.querySelector('.paly-pause');
-const nextBth = document.getElementById('next');
+const palyPause = document.querySelector('.paly-pause'); // note spelling
+const nextBtn = document.getElementById('next');
 const prevBtn = document.getElementById('prev');
 const progressArea = document.querySelector('.progress-area');
 const progressBar = document.querySelector('.progress-bar');
-const currentTime = document.querySelector('.current-time');
-const maxTime = document.querySelector('.max-time');
+const currentTimeTag = document.querySelector('.current-time');
+const maxTimeTag = document.querySelector('.max-time');
 const repeatPlis = document.getElementById('repeat-plis');
 const moreMusic = document.getElementById('more-music');
 const musicList = document.querySelector('.music-list');
 const closeBtn = document.querySelector('#close');
 const ulTag = musicList.querySelector('ul');
+const searchInput = document.getElementById('search');
 
-// console.log(palyPause);
-let musicIndex = 0
+let musicIndex = 0;
 let isMusicPaused = true;
 
 // Load Event
 window.addEventListener('load', () => {
-    loadMusic(musicIndex);
-    loadMusicList();
-})
+  loadMusic(musicIndex);
+  loadMusicList();
+});
 
-// Load Function
+// ==========================
+// Load Music Function
+// ==========================
 function loadMusic(indexNum) {
-    const songs = allMusic[indexNum];
-    musicName.textContent = songs.name;
-    musicArtist.textContent = songs.artist;
-    musicImage.src = `img/${songs.img}.jpg`;
-    musicAudio.src = `song/${songs.src}.mp3`;
-    highlightPlaySong();
+  const song = allMusic[indexNum];
+  musicName.textContent = song.name;
+  musicArtist.textContent = song.artist;
+
+  // Image fallback
+  const imgPath = `img/${song.img}.jpg`;
+  fetch(imgPath)
+    .then(res => {
+      if(res.ok) musicImage.src = imgPath;
+      else musicImage.src = "img/default.jpg";
+    })
+    .catch(() => musicImage.src = "img/default.jpg");
+
+  // Audio
+  musicAudio.src = `song/${song.src}.mp3`;
+
+  highlightPlaySong();
 }
 
-// Paly Music Function
-function palyMusic() {
-    musicAudio.play();
-    isMusicPaused = false
-    palyPause.querySelector('i').innerText = "pause";
-    highlightPlaySong();
+// ==========================
+// Play / Pause Functions
+// ==========================
+function playMusic() {
+  musicAudio.play();
+  isMusicPaused = false;
+  palyPause.querySelector('i').innerText = "pause";
+  document.querySelector('.img-area').classList.add('playing');
+  highlightPlaySong();
 }
 
-// Pasuse Music Function
 function pauseMusic() {
-    musicAudio.pause();
-    isMusicPaused = true;
-    palyPause.querySelector('i').innerText = "play_arrow";
-    highlightPlaySong();
+  musicAudio.pause();
+  isMusicPaused = true;
+  palyPause.querySelector('i').innerText = "play_arrow";
+  document.querySelector('.img-area').classList.remove('playing');
+  highlightPlaySong();
 }
 
-// Play Pause Click Event
-palyPause.addEventListener('click', () => {
-    isMusicPaused ? palyMusic() : pauseMusic()
-})
+palyPause.addEventListener('click', () => isMusicPaused ? playMusic() : pauseMusic());
 
-
-function next() {
-    musicIndex = (musicIndex + 1) % allMusic.length;
-    loadMusic(musicIndex);
-    palyMusic();
+// ==========================
+// Next / Previous
+// ==========================
+function nextMusic() {
+  musicIndex = (musicIndex + 1) % allMusic.length;
+  loadMusic(musicIndex);
+  playMusic();
+}
+function prevMusic() {
+  musicIndex = (musicIndex - 1 + allMusic.length) % allMusic.length;
+  loadMusic(musicIndex);
+  playMusic();
 }
 
-// Next Function Event
-nextBth.addEventListener('click', next)
+nextBtn.addEventListener('click', nextMusic);
+prevBtn.addEventListener('click', prevMusic);
 
+// ==========================
+// Progress Bar Update
+// ==========================
+musicAudio.addEventListener('timeupdate', e => {
+  const currentTime = e.target.currentTime;
+  const duration = e.target.duration;
+  if(duration){
+    const progressPercent = (currentTime / duration) * 100;
+    progressBar.style.width = `${progressPercent}%`;
+    updateCurrentTime(currentTime);
+  }
+});
 
-function prev() {
-    musicIndex = (musicIndex - 1 + allMusic.length) % allMusic.length;
-    loadMusic(musicIndex);
-    palyMusic();
-}
-// Prev Function  Event
-prevBtn.addEventListener('click', prev);
-
-
-musicAudio.addEventListener("timeupdate", (e) => {
-    const currentTime = e.target.currentTime;
-    const duration = e.target.duration;
-
-    if (duration) {
-        const progressWidth = (currentTime / duration) * 100;
-        progressBar.style.width = `${progressWidth}%`
-        updateCurrentTime(currentTime);
-    }
-})
-
-function updateCurrentTime(current_Time) {
-    const currentMin = Math.floor(current_Time / 60);
-    const currentSec = Math.floor(current_Time % 60).toString().padStart(2, "0");
-    currentTime.textContent = `${currentMin}:${currentSec}`
+function updateCurrentTime(time){
+  const min = Math.floor(time / 60);
+  const sec = Math.floor(time % 60).toString().padStart(2,"0");
+  currentTimeTag.textContent = `${min}:${sec}`;
 }
 
-musicAudio.addEventListener("loadeddata", () => {
-    const duration = musicAudio.duration;
-    const totalMin = Math.floor(duration / 60);
-    const totalSec = Math.floor(duration % 60).toString().padStart(2, "0");
-    maxTime.textContent = `${totalMin}:${totalSec}`
-})
+musicAudio.addEventListener('loadeddata', () => {
+  const duration = musicAudio.duration;
+  const min = Math.floor(duration / 60);
+  const sec = Math.floor(duration % 60).toString().padStart(2,"0");
+  maxTimeTag.textContent = `${min}:${sec}`;
+});
 
-progressArea.addEventListener("click", (e) => {
-    const progressWidth = progressArea.clientWidth;
-    const clickedOffsetX = e.offsetX;
-    const songDuration = musicAudio.duration;
-    musicAudio.currentTime = (clickedOffsetX / progressWidth) * songDuration;
-    palyMusic();
-})
+// Seek on click
+progressArea.addEventListener('click', e => {
+  const width = progressArea.clientWidth;
+  const offsetX = e.offsetX;
+  const duration = musicAudio.duration;
+  musicAudio.currentTime = (offsetX / width) * duration;
+  playMusic();
+});
 
+// ==========================
+// Repeat / Shuffle
+// ==========================
 repeatPlis.addEventListener('click', () => {
-    const getText = repeatPlis.innerText;
-    switch (getText) {
-        case "repeat":
-            repeatPlis.innerText = "repeat_one";
-            repeatPlis.setAttribute("title", "Song looped");
-            break;
-        case "repeat_one":
-            repeatPlis.innerText = "shuffle";
-            repeatPlis.setAttribute("title", "Playback shuffled");
-            break;
-        case "shuffle":
-            repeatPlis.innerText = "repeat";
-            repeatPlis.setAttribute("title", "Playlist looped");
-            break;
-    }
-})
+  const txt = repeatPlis.innerText;
+  if(txt === "repeat"){
+    repeatPlis.innerText = "repeat_one";
+    repeatPlis.setAttribute("title","Song looped");
+  } else if(txt === "repeat_one"){
+    repeatPlis.innerText = "shuffle";
+    repeatPlis.setAttribute("title","Playback shuffled");
+  } else {
+    repeatPlis.innerText = "repeat";
+    repeatPlis.setAttribute("title","Playlist looped");
+  }
+});
 
 musicAudio.addEventListener('ended', () => {
-    const getText = repeatPlis.innerText;
-    switch (getText) {
-        case "repeat":
-            next();
-            break;
-        case "repeat_one":
-            musicAudio.currentTime = 0;
-            loadMusic(musicIndex);
-            palyMusic();
-            break;
-        case "shuffle":
-            shuffleMusic();
-            break;
-    }
-})
-
-function shuffleMusic() {
-    let randomIndex;
-    do {
-        randomIndex = Math.floor(Math.random() * allMusic.length);
-    } while (randomIndex === musicIndex);
-    musicIndex = randomIndex;
+  const txt = repeatPlis.innerText;
+  if(txt === "repeat") nextMusic();
+  else if(txt === "repeat_one"){
+    musicAudio.currentTime = 0;
     loadMusic(musicIndex);
-    palyMusic();
+    playMusic();
+  }
+  else shuffleMusic();
+});
+
+function shuffleMusic(){
+  let randIndex;
+  do{
+    randIndex = Math.floor(Math.random()*allMusic.length);
+  } while(randIndex === musicIndex);
+  musicIndex = randIndex;
+  loadMusic(musicIndex);
+  playMusic();
 }
 
-moreMusic.addEventListener('click', () => {
-    musicList.classList.toggle("active");
-})
+// ==========================
+// Music List
+// ==========================
+moreMusic.addEventListener('click', () => musicList.classList.toggle('active'));
+closeBtn.addEventListener('click', () => musicList.classList.remove('active'));
 
-closeBtn.addEventListener('click', () => {
-    musicList.classList.remove("active");
-})
+function loadMusicList(){
+  ulTag.innerHTML = "";
+  allMusic.forEach((song,index)=>{
+    const li = document.createElement('li');
+    li.setAttribute('li-index',index);
+    li.innerHTML = `
+      <div class="row">
+        <span>${song.name}</span>
+        <span>${song.artist}</span>
+      </div>
+      <span class="audio-duration" id="audio-${index}">00:00</span>
+      <audio src="song/${song.src}.mp3" id="song-${index}"></audio>
+    `;
+    ulTag.appendChild(li);
 
-function loadMusicList() {
-    ulTag.innerHTML = "";
+    // Load duration
+    const audioTag = li.querySelector(`#song-${index}`);
+    const durationTag = li.querySelector(`#audio-${index}`);
+    audioTag.addEventListener('loadeddata', ()=>{
+      const min = Math.floor(audioTag.duration / 60);
+      const sec = Math.floor(audioTag.duration % 60).toString().padStart(2,"0");
+      durationTag.innerText = `${min}:${sec}`;
+      durationTag.setAttribute('t-duration',`${min}:${sec}`);
+    });
 
-    allMusic.forEach((song, index) => {
-        const li = document.createElement("li");
-        li.setAttribute("li-index", index);
-
-        li.innerHTML = `
-        <div class="row">
-            <span>${song.name}</span>
-            <span>${song.artist}</span>
-        </div>
-         <span class="audio-duration" id="audio-${index}">00:00</span>
-        <audio src="song/${song.src}.mp3" id="song-${index}"></audio>
-        `;
-        ulTag.appendChild(li);
-
-        const audioTag = li.querySelector(`#song-${index}`);
-        const durationTag = li.querySelector(`#audio-${index}`);
-
-        audioTag.addEventListener('loadeddata', () => {
-            const totalMin = Math.floor(audioTag.duration / 60);
-            const totalSec = Math.floor(audioTag.duration % 60).toString().padStart(2, "0");
-            durationTag.innerText = `${totalMin}:${totalSec}`;
-            durationTag.setAttribute("t-duration", `${totalMin}:${totalSec}`);
-        })
-
-        li.addEventListener('click', () => {
-            musicIndex = index;
-            loadMusic(musicIndex);
-            palyMusic();
-            musicList.classList.remove("active");
-        })
-    })
+    // Click to play
+    li.addEventListener('click',()=>{
+      musicIndex = index;
+      loadMusic(musicIndex);
+      playMusic();
+      musicList.classList.remove('active');
+    });
+  });
+  highlightPlaySong();
 }
 
-function highlightPlaySong() {
-    const allLiTags = ulTag.querySelectorAll('li');
-    allLiTags.forEach(li => li.classList.remove("playing"));
-    allLiTags[musicIndex]?.classList.add("playing");    
+// ==========================
+// Highlight Playing Song
+// ==========================
+function highlightPlaySong(){
+  const allLi = ulTag.querySelectorAll('li');
+  allLi.forEach(li => li.classList.remove('playing'));
+  if(allLi[musicIndex]) allLi[musicIndex].classList.add('playing');
 }
+
+// ==========================
+// Search Feature (working + top match first)
+// ==========================
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.toLowerCase();
+  const allLi = Array.from(ulTag.querySelectorAll('li'));
+
+  const matched = [];
+  const unmatched = [];
+
+  allLi.forEach(li => {
+    const name = li.querySelector('.row span').innerText.toLowerCase();
+    const artist = li.querySelector('.row span:nth-child(2)')?.innerText.toLowerCase() || '';
+    
+    if(name.includes(query) || artist.includes(query)) {
+      matched.push(li);
+    } else {
+      unmatched.push(li);
+    }
+  });
+
+  ulTag.innerHTML = "";
+  matched.forEach(li => {
+    li.style.display = 'flex';
+    ulTag.appendChild(li);
+  });
+  unmatched.forEach(li => {
+    li.style.display = 'none';
+    ulTag.appendChild(li);
+  });
+});
