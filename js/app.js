@@ -1,9 +1,8 @@
-const contanir = document.querySelector('.contanir');
 const musicImage = document.querySelector('.img-area img');
 const musicName = document.querySelector('.song-name');
 const musicArtist = document.querySelector('.song-artist');
 const musicAudio = document.getElementById('main-audio');
-const palyPause = document.querySelector('.paly-pause'); // note spelling
+const palyPause = document.querySelector('.paly-pause');
 const nextBtn = document.getElementById('next');
 const prevBtn = document.getElementById('prev');
 const progressArea = document.querySelector('.progress-area');
@@ -20,16 +19,26 @@ const searchInput = document.getElementById('search');
 let musicIndex = 0;
 let isMusicPaused = true;
 
-// Load Event
+// All music list
+let allMusic = [
+  { name: "Faded - Alan Walker", artist: "Alan Walker", img: "walker", src: "music-1" },
+  { name: "Ikson Anywhere", artist: "Ikson", img: "music-2", src: "music-2" },
+  { name: "Beauz & Jvna - Crazy", artist: "Beauz & Jvna", img: "music-3", src: "music-3" },
+  { name: "Hardwind - Want Me", artist: "Mike Archangelo", img: "music-4", src: "music-4" },
+  { name: "Jim - Sun Goes Down", artist: "Jim Yosef x Roy", img: "music-5", src: "music-5" },
+  { name: "Lost Sky - Vision NCS", artist: "NCS Release", img: "music-6", src: "music-6" },
+];
+
+// Load music on page load
 window.addEventListener('load', () => {
   loadMusic(musicIndex);
   loadMusicList();
 });
 
-// ==========================
+// ====================
 // Load Music Function
-// ==========================
-function loadMusic(indexNum) {
+// ====================
+function loadMusic(indexNum){
   const song = allMusic[indexNum];
   musicName.textContent = song.name;
   musicArtist.textContent = song.artist;
@@ -37,10 +46,7 @@ function loadMusic(indexNum) {
   // Image fallback
   const imgPath = `img/${song.img}.jpg`;
   fetch(imgPath)
-    .then(res => {
-      if(res.ok) musicImage.src = imgPath;
-      else musicImage.src = "img/default.jpg";
-    })
+    .then(res => res.ok ? musicImage.src = imgPath : musicImage.src = "img/default.jpg")
     .catch(() => musicImage.src = "img/default.jpg");
 
   // Audio
@@ -49,129 +55,103 @@ function loadMusic(indexNum) {
   highlightPlaySong();
 }
 
-// ==========================
-// Play / Pause Functions
-// ==========================
-function playMusic() {
+// ====================
+// Play / Pause
+// ====================
+function playMusic(){
   musicAudio.play();
   isMusicPaused = false;
   palyPause.querySelector('i').innerText = "pause";
   document.querySelector('.img-area').classList.add('playing');
   highlightPlaySong();
 }
-
-function pauseMusic() {
+function pauseMusic(){
   musicAudio.pause();
   isMusicPaused = true;
   palyPause.querySelector('i').innerText = "play_arrow";
   document.querySelector('.img-area').classList.remove('playing');
   highlightPlaySong();
 }
-
 palyPause.addEventListener('click', () => isMusicPaused ? playMusic() : pauseMusic());
 
-// ==========================
+// ====================
 // Next / Previous
-// ==========================
-function nextMusic() {
+// ====================
+function nextMusic(){
   musicIndex = (musicIndex + 1) % allMusic.length;
   loadMusic(musicIndex);
   playMusic();
 }
-function prevMusic() {
+function prevMusic(){
   musicIndex = (musicIndex - 1 + allMusic.length) % allMusic.length;
   loadMusic(musicIndex);
   playMusic();
 }
-
 nextBtn.addEventListener('click', nextMusic);
 prevBtn.addEventListener('click', prevMusic);
 
-// ==========================
-// Progress Bar Update
-// ==========================
+// ====================
+// Progress Bar
+// ====================
 musicAudio.addEventListener('timeupdate', e => {
   const currentTime = e.target.currentTime;
   const duration = e.target.duration;
   if(duration){
-    const progressPercent = (currentTime / duration) * 100;
+    const progressPercent = (currentTime/duration)*100;
     progressBar.style.width = `${progressPercent}%`;
     updateCurrentTime(currentTime);
   }
 });
-
 function updateCurrentTime(time){
-  const min = Math.floor(time / 60);
-  const sec = Math.floor(time % 60).toString().padStart(2,"0");
+  const min = Math.floor(time/60);
+  const sec = Math.floor(time%60).toString().padStart(2,"0");
   currentTimeTag.textContent = `${min}:${sec}`;
 }
-
-musicAudio.addEventListener('loadeddata', () => {
-  const duration = musicAudio.duration;
-  const min = Math.floor(duration / 60);
-  const sec = Math.floor(duration % 60).toString().padStart(2,"0");
+musicAudio.addEventListener('loadeddata', ()=>{
+  const dur = musicAudio.duration;
+  const min = Math.floor(dur/60);
+  const sec = Math.floor(dur%60).toString().padStart(2,"0");
   maxTimeTag.textContent = `${min}:${sec}`;
 });
-
-// Seek on click
-progressArea.addEventListener('click', e => {
+progressArea.addEventListener('click', e=>{
   const width = progressArea.clientWidth;
   const offsetX = e.offsetX;
-  const duration = musicAudio.duration;
-  musicAudio.currentTime = (offsetX / width) * duration;
+  musicAudio.currentTime = (offsetX/width)*musicAudio.duration;
   playMusic();
 });
 
-// ==========================
+// ====================
 // Repeat / Shuffle
-// ==========================
-repeatPlis.addEventListener('click', () => {
+// ====================
+repeatPlis.addEventListener('click', ()=>{
   const txt = repeatPlis.innerText;
-  if(txt === "repeat"){
-    repeatPlis.innerText = "repeat_one";
-    repeatPlis.setAttribute("title","Song looped");
-  } else if(txt === "repeat_one"){
-    repeatPlis.innerText = "shuffle";
-    repeatPlis.setAttribute("title","Playback shuffled");
-  } else {
-    repeatPlis.innerText = "repeat";
-    repeatPlis.setAttribute("title","Playlist looped");
-  }
+  if(txt==="repeat"){repeatPlis.innerText="repeat_one"; repeatPlis.title="Song looped";}
+  else if(txt==="repeat_one"){repeatPlis.innerText="shuffle"; repeatPlis.title="Playback shuffled";}
+  else {repeatPlis.innerText="repeat"; repeatPlis.title="Playlist looped";}
 });
-
-musicAudio.addEventListener('ended', () => {
+musicAudio.addEventListener('ended', ()=>{
   const txt = repeatPlis.innerText;
-  if(txt === "repeat") nextMusic();
-  else if(txt === "repeat_one"){
-    musicAudio.currentTime = 0;
-    loadMusic(musicIndex);
-    playMusic();
-  }
+  if(txt==="repeat") nextMusic();
+  else if(txt==="repeat_one"){musicAudio.currentTime=0; loadMusic(musicIndex); playMusic();}
   else shuffleMusic();
 });
-
 function shuffleMusic(){
   let randIndex;
-  do{
-    randIndex = Math.floor(Math.random()*allMusic.length);
-  } while(randIndex === musicIndex);
-  musicIndex = randIndex;
-  loadMusic(musicIndex);
-  playMusic();
+  do{randIndex = Math.floor(Math.random()*allMusic.length);} while(randIndex===musicIndex);
+  musicIndex = randIndex; loadMusic(musicIndex); playMusic();
 }
 
-// ==========================
+// ====================
 // Music List
-// ==========================
-moreMusic.addEventListener('click', () => musicList.classList.toggle('active'));
-closeBtn.addEventListener('click', () => musicList.classList.remove('active'));
-
+// ====================
+moreMusic.addEventListener('click', ()=>musicList.classList.toggle('active'));
+closeBtn.addEventListener('click', ()=>musicList.classList.remove('active'));
 function loadMusicList(){
-  ulTag.innerHTML = "";
+  ulTag.innerHTML="";
   allMusic.forEach((song,index)=>{
     const li = document.createElement('li');
     li.setAttribute('li-index',index);
-    li.innerHTML = `
+    li.innerHTML=`
       <div class="row">
         <span>${song.name}</span>
         <span>${song.artist}</span>
@@ -181,19 +161,17 @@ function loadMusicList(){
     `;
     ulTag.appendChild(li);
 
-    // Load duration
     const audioTag = li.querySelector(`#song-${index}`);
     const durationTag = li.querySelector(`#audio-${index}`);
     audioTag.addEventListener('loadeddata', ()=>{
-      const min = Math.floor(audioTag.duration / 60);
-      const sec = Math.floor(audioTag.duration % 60).toString().padStart(2,"0");
+      const min = Math.floor(audioTag.duration/60);
+      const sec = Math.floor(audioTag.duration%60).toString().padStart(2,"0");
       durationTag.innerText = `${min}:${sec}`;
       durationTag.setAttribute('t-duration',`${min}:${sec}`);
     });
 
-    // Click to play
-    li.addEventListener('click',()=>{
-      musicIndex = index;
+    li.addEventListener('click', ()=>{
+      musicIndex=index;
       loadMusic(musicIndex);
       playMusic();
       musicList.classList.remove('active');
@@ -202,43 +180,32 @@ function loadMusicList(){
   highlightPlaySong();
 }
 
-// ==========================
-// Highlight Playing Song
-// ==========================
+// ====================
+// Highlight Current Song
+// ====================
 function highlightPlaySong(){
   const allLi = ulTag.querySelectorAll('li');
-  allLi.forEach(li => li.classList.remove('playing'));
+  allLi.forEach(li=>li.classList.remove('playing'));
   if(allLi[musicIndex]) allLi[musicIndex].classList.add('playing');
 }
 
-// ==========================
-// Search Feature (working + top match first)
-// ==========================
-searchInput.addEventListener('input', () => {
+// ====================
+// Search (working + top match)
+// ====================
+searchInput.addEventListener('input', ()=>{
   const query = searchInput.value.toLowerCase();
-  const allLi = Array.from(ulTag.querySelectorAll('li'));
-
-  const matched = [];
-  const unmatched = [];
-
-  allLi.forEach(li => {
+  const allLi = ulTag.querySelectorAll('li');
+  allLi.forEach(li=>{
     const name = li.querySelector('.row span').innerText.toLowerCase();
     const artist = li.querySelector('.row span:nth-child(2)')?.innerText.toLowerCase() || '';
-    
-    if(name.includes(query) || artist.includes(query)) {
-      matched.push(li);
-    } else {
-      unmatched.push(li);
+    if(name.includes(query) || artist.includes(query)){
+      li.style.display='flex';
+      li.style.order=-1; // top
+    } else{
+      li.style.display='none';
+      li.style.order=0; // bottom
     }
   });
-
-  ulTag.innerHTML = "";
-  matched.forEach(li => {
-    li.style.display = 'flex';
-    ulTag.appendChild(li);
-  });
-  unmatched.forEach(li => {
-    li.style.display = 'none';
-    ulTag.appendChild(li);
-  });
 });
+
+
